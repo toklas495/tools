@@ -1,0 +1,26 @@
+POST /v1/organizations/08dcf725-2d15-4b1a-8b72-e6a7422220ff/members/14bb1d4f-42e6-47a9-8553-eb3cd44dab0b HTTP/1.1
+Host: api.configcat.com
+Content-Type: application/json
+Authorization: Basic MDhkZDAyNWItYzcwZS00MWUzLTg3OTMtYzVhMDU0NmE2NGNiOnhTYmFRcDNHdmFRUEhPY0UwampBMG1WTXJLdkZkbS81U3cxZG1rdjluelk9
+Connection:close
+Transfer-Encoding:chunked
+
+13
+{  "permissionGroup
+12
+Ids": [   61247  ]
+13
+,  "isAdmin":false,
+11
+"isBillingManager
+13
+": false,  "removeF
+14
+romPermissionGroupsW
+14
+hereIdNotSet": false
+13
+,  "twoFactorEnable
+8
+d":true}
+0
