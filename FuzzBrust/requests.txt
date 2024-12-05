@@ -1,0 +1,20 @@
+POST /v1/organizations/08dcf725-2d15-4b1a-8b72-e6a7422220ff/members/14bb1d4f-42e6-47a9-8553-eb3cd44dab0b HTTP/2
+Host: api.configcat.com
+Content-Type: application/json
+Authorization: Basic MDhkZDAyNWItYzcwZS00MWUzLTg3OTMtYzVhMDU0NmE2NGNiOnhTYmFRcDNHdmFRUEhPY0UwampBMG1WTXJLdkZkbS81U3cxZG1rdjluelk9
+User-Agent: PostmanRuntime/7.42.0
+Accept: */*
+Cache-Control: no-cache
+Postman-Token: d7214a12-9127-4b8b-b6f2-a45239f01be2
+Accept-Encoding: gzip, deflate, br
+Content-Length: 169
+
+{
+  "permissionGroupIds": [
+   61247
+  ],
+  "isAdmin":false,
+  "isBillingManager": false,
+  "removeFromPermissionGroupsWhereIdNotSet": false,
+  "twoFactorEnabled":FUZZ
+}

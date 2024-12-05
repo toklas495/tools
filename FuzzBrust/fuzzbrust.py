@@ -6,143 +6,115 @@ import queue
 from urllib3.exceptions import InsecureRequestWarning
 import warnings
 import os
-import random
 import json
+import makeRequest as MR
 
 # for hiding the proxy error 
 warnings.simplefilter('ignore', InsecureRequestWarning) 
 
 FUZZ_LIST = list() #FUZZ_LIST store our fuzzy payload
 
-HEADERS = {"HEADER":"","WORDLIST":""}
+WORDLIST_PATH = ""
 
 
 
 #  REQUEST file 
-with open('requests.json','r') as file:
-        json_file = json.load(file)
+#*************************************
+requestList = MR.openRequests()
 REQUEST_FILE = queue.Queue()
 
-for request in json_file:
+for request in requestList:
     REQUEST_FILE.put(request)
-
-
-
-# with open('wordlist/requests.json','r') as file:
-#     DATA = json.load(file)
-# DATA Store the JSON file 
-
-def process_word(word):
-#    try:
-#        return int(word)
-#    except ValueError:
-#        pass
-#    try:
-#        return float(word)
-#    except ValueError:
-#        pass
-#   try:
-#        return json.loads(word)
-#    except json.JSONDecodeError:
-#        pass
-    return word
+#**************************************
 
 # FUZZ filler which fill fuzz when my FUZZ_LIST is empty
-
+#*********************************************************
 def FUZZ_FILLER():
-    path = HEADERS["WORDLIST"]
+    path = WORDLIST_PATH
     if(os.path.exists(path)):
         with open(path,'r',encoding='utf-8') as file:
             WORDLIST = file.read().split('\n')
         for words in WORDLIST:
-            FUZZ_LIST.append(process_word(words))
+            FUZZ_LIST.append(words)
     else:
         sys.exit(1)
 
-
-
 ###################################################################################################
 
-# this algorithm replace the FUZZ with your FUZZ Payload
-
-def replace_fuzz(data, payload):
-    # Base case: if the data is a string and matches 'fuzz', return the payload
-    if isinstance(data, str):
-        if 'FUZZ' in data:
-            return data.replace('FUZZ',payload)
-        else:
-            return data
-    
-    
-    # If the data is a dictionary, recurse over each key and value
-    elif isinstance(data, dict):
-        return {key: replace_fuzz(value, payload) for key, value in data.items()}
-    
-    # If the data is a list, recurse over each element in the list
-    elif isinstance(data, list):
-        return [replace_fuzz(item, payload) for item in data]
-    
-    # If the data is a boolean, int, or any other primitive type, return it as is
-    else:
-        return data
-
-
-
-
+# Use proxy for sent result (response) on burpsuite 
+# you can change proxy address as you wish.....
 proxies = {
     'http':'http://127.0.0.1:8080',
     'https':'http://127.0.0.1:8080'
 }
 
-
-#Request Counter
-
-
 class Fuzzer:
-    def __init__(self,METHOD,TARGET_URL,DATA=""):
-        self.METHOD=METHOD # Method 
-        self.URL=TARGET_URL # Target URL
-        self.DATA=DATA # DATA
-        self.headers = HEADERS["HEADER"] # headers parameters
+    def __init__(self,request):
+        self.HEADER = dict()
+        self.REQUEST = request
+        self.DATA = ""
+        self.METHOD = ""
+        self.URL = ""
         self.WORDLIST = queue.Queue()
         for fuzz in FUZZ_LIST:
             self.WORDLIST.put(fuzz)
 
     
 
-    def fuzzer_Requests(self,fuzz_data,FUZZ):
+    def fuzzer_Requests(self,FUZZ):
 
         try:
             session = requests.Session()
             request_manager = ""
-            if(self.METHOD=="POST"):
-                request_manager = session.post(self.URL,headers=self.headers,proxies=proxies,verify=False,json=fuzz_data)
-            elif(self.METHOD=="GET"):
-                request_manager = session.get(fuzz_data,headers=self.headers,proxies=proxies,verify=False)
+
+            if self.DATA:
+                if type(self.DATA)==dict:
+                    request_manager = session.request(self.METHOD.lower(),self.URL,headers=self.HEADER,proxies=proxies,verify=False,json=self.DATA)
+                elif type(self.DATA)==str:
+                    request_manager = session.request(self.METHOD.lower(),self.URL,headers=self.HEADER,proxies=proxies,verify=False,data=self.DATA)
             else:
-                request_manager = session.put(self.URL,headers=self.headers,proxies=proxies,verify=False,json=fuzz_data)
+                request_manager = session.request(self.METHOD.lower(),self.URL,headers=self.HEADER,proxies=proxies,verify=False)
+
 
             if(request_manager.status_code==429):
                 time.sleep(3)
                 self.WORDLIST.put(FUZZ)
                 
 
-            print(f'#-{self.URL:<60} {request_manager.status_code:<10} {FUZZ}')
+            print(f'\033[33m#-{self.URL:<60} {request_manager.status_code:<10} {FUZZ}\033[0m')
 
         except Exception as e:
             print("Exception -: %s" %e)
+
+    
+    def rateLimitBypass():
+        pass
 
 
 
     def request_handle(self):
         while not self.WORDLIST.empty():
             payload = self.WORDLIST.get()
-            if self.DATA:
-                fuzz_data = replace_fuzz(self.DATA,payload)
-            else:
-                fuzz_data = replace_fuzz(self.URL,payload)
-            self.fuzzer_Requests(fuzz_data,payload)
-
+            if self.REQUEST:
+                headers,data = MR.requestParser(self.REQUEST.strip(),payload)
+                # ****************************************************************
+                #   Feel the header method and assign url or method
+                # ****************************************************************
+                self.METHOD = headers["METHOD"]
+                self.URL = f'https://{headers["Host"]}{headers["PATH"]}'
+                for key in headers:
+                    if key=="METHOD" or key=="PATH":
+                        continue
+                    self.HEADER[key] = headers[key]
+                
+                if data:
+                    try:
+                        self.DATA = json.loads(data)
+                    except json.JSONDecodeError:
+                        self.DATA = data
+            
+            self.fuzzer_Requests(payload)
+                    
 
     def runner(self):
         THREAD_LIST = []
@@ -153,23 +125,18 @@ class Fuzzer:
         for thr in THREAD_LIST:
             thr.join()
 
-def helper():
-    ####################################################
-
+def mainWorker():
+    #***************************************************#
     while not REQUEST_FILE.empty():
-        request = REQUEST_FILE.get()        
-        METHOD = request['METHOD']
-        TARGET_URL = request['URL']
-        print(f'\nURL:-{TARGET_URL}\n')
-        DATA = request['DATA']
-        TARGET_REQUEST = Fuzzer(METHOD,TARGET_URL,DATA)
-        TARGET_REQUEST.runner()
+        request = REQUEST_FILE.get() 
+        fuzzer = Fuzzer(request)
+        fuzzer.runner()
 
 def run():
     FUZZ_FILLER()
     THREAD_LIST = []
     for thr in range(2):
-        thread = threading.Thread(target=helper)
+        thread = threading.Thread(target=mainWorker)
         thread.start()
         THREAD_LIST.append(thread)
     for thr in THREAD_LIST:
@@ -181,13 +148,9 @@ def help():
 
 def parameterHandler(args):
     if len(args)>1:
-        if "--headers" in args:
-            HEADERS["HEADER"] = json.loads(args[args.index("--headers")+1])
-        else:
-            help()
-        
         if "-w" in args:
-            HEADERS["WORDLIST"] = args[args.index("-w")+1]
+            global WORDLIST_PATH
+            WORDLIST_PATH = args[args.index("-w")+1]
         else:
             help()
     else:
