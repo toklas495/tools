@@ -1,5 +1,5 @@
-POST /v1/organizations/08dcf725-2d15-4b1a-8b72-e6a7422220ff/members/14bb1d4f-42e6-47a9-8553-eb3cd44dab0b HTTP/1.1
-Host: api.configcat.com
+POST /v1/organizations/08dcf725-2d15-4b1a-7876-e6a7422220ff/members/14bb1d4f-42e6-7867-8553-eb3cd44dab0b HTTP/1.1
+Host: update.cat.com
 Content-Type: application/json
 Connection:close
 Transfer-Encoding:chunked
