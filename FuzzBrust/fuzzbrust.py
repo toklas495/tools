@@ -8,6 +8,8 @@ import warnings
 import os
 import json
 import makeRequest as MR
+import database as DB
+import hashlib
 
 # for hiding the proxy error 
 warnings.simplefilter('ignore', InsecureRequestWarning) 
@@ -15,6 +17,12 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 FUZZ_LIST = list() #FUZZ_LIST store our fuzzy payload
 
 WORDLIST_PATH = ""
+
+IGNORE_FIELDS = ["Date","X-Rate-Limit-Limit",'X-Rate-Limit-Remaining','X-Rate-Limit-Reset','Strict-Transport-Security','Cf-Ray']
+
+# Create DAtABASE 
+
+DATABASE_FILE = DB.create_tables()
 
 
 
@@ -55,6 +63,7 @@ class Fuzzer:
         self.DATA = ""
         self.METHOD = ""
         self.URL = ""
+        self.hash = hashlib.md5(request.encode('utf-8')).hexdigest()
         self.WORDLIST = queue.Queue()
         for fuzz in FUZZ_LIST:
             self.WORDLIST.put(fuzz)
@@ -71,7 +80,7 @@ class Fuzzer:
                 if type(self.DATA)==dict:
                     request_manager = session.request(self.METHOD.lower(),self.URL,headers=self.HEADER,proxies=proxies,verify=False,json=self.DATA)
                 elif type(self.DATA)==str:
-                    request_manager = session.request(self.METHOD.lower(),self.URL,headers=self.HEADER,proxies=proxies,verify=False,data=self.DATA)
+                    request_manager = session.request(self.METHOD.lower(),self.URL,headers=self.HEADER,proxies=proxies,verify=False,data=self.DATA.encode('utf-8'))
             else:
                 request_manager = session.request(self.METHOD.lower(),self.URL,headers=self.HEADER,proxies=proxies,verify=False)
 
@@ -79,16 +88,14 @@ class Fuzzer:
             if(request_manager.status_code==429):
                 time.sleep(3)
                 self.WORDLIST.put(FUZZ)
-                
+            else:
+                DB.store(DATABASE_FILE,self.METHOD,self.hash,request_manager,FUZZ,IGNORE_FIELDS)
+            
 
-            print(f'\033[33m#-{self.URL:<60} {request_manager.status_code:<10} {FUZZ}\033[0m')
+            print(f'\033[35m#-{self.URL:<60} {request_manager.status_code:<10} {FUZZ}\033[0m')
 
         except Exception as e:
             print("Exception -: %s" %e)
-
-    
-    def rateLimitBypass():
-        pass
 
 
 
@@ -135,7 +142,7 @@ def mainWorker():
 def run():
     FUZZ_FILLER()
     THREAD_LIST = []
-    for thr in range(2):
+    for thr in range(1):
         thread = threading.Thread(target=mainWorker)
         thread.start()
         THREAD_LIST.append(thread)
@@ -143,7 +150,7 @@ def run():
         thr.join()
 
 def help():
-    print('#[usage] python fuzzbrust.py --headers \'{"key":"value"}\' -w <wordlist>')
+    print('#[usage] python fuzzbrust.py  -w <wordlist>')
     sys.exit()
 
 def parameterHandler(args):
