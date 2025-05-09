@@ -1,6 +1,4 @@
-![Uploading ChatGPT Image May 8, 2025, 12_37_11 PM.png…]()
-
-# **FuzzBuster**
+# **FuzzBrust**
 
 FuzzBuster is a tool that automates API fuzzing by sending fuzzed payloads to API endpoints. You can use this tool to test the security of API endpoints by identifying potential vulnerabilities. This tool supports sending requests simultaneously to multiple endpoints and fuzzing them using a wordlist.
 
